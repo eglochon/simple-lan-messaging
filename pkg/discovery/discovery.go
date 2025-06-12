@@ -6,11 +6,22 @@ import (
 	"time"
 )
 
+func getLocalIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
+}
+
 type DiscoveryService struct {
 	Message   []byte
 	Interval  time.Duration
 	running   bool
 	onMessage func(data []byte, addr *net.UDPAddr)
+	localIP   *string
 }
 
 // NewDiscoveryService creates a new instance
@@ -40,22 +51,30 @@ func (d *DiscoveryService) Stop() {
 func (d *DiscoveryService) listen() {
 	addr, err := net.ResolveUDPAddr("udp", multicastAddr)
 	if err != nil {
-		fmt.Println("Error resolving address:", err)
+		fmt.Println("Resolve error:", err)
 		return
 	}
 
-	// Listen on all interfaces
 	conn, err := net.ListenMulticastUDP("udp", nil, addr)
 	if err != nil {
-		fmt.Println("Error listening:", err)
+		fmt.Println("Listen error:", err)
 		return
 	}
 	defer conn.Close()
 
+	if d.localIP == nil {
+		localIP := getLocalIP()
+		d.localIP = &localIP
+	}
 	buf := make([]byte, 1024)
+
 	for d.running {
 		n, src, err := conn.ReadFromUDP(buf)
-		if err == nil && d.onMessage != nil {
+		if err != nil {
+			continue
+		}
+
+		if src.IP.String() != *d.localIP {
 			d.onMessage(buf[:n], src)
 		}
 	}
