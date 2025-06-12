@@ -64,10 +64,10 @@ func (d *DiscoveryService) listen() {
 	}
 	defer conn.Close()
 
-	// if d.localIP == nil {
-	// 	localIP := getLocalIP()
-	// 	d.localIP = &localIP
-	// }
+	if d.localIP == nil {
+		localIP := getLocalIP()
+		d.localIP = &localIP
+	}
 	buf := make([]byte, 1024)
 
 	for d.running {
@@ -76,9 +76,9 @@ func (d *DiscoveryService) listen() {
 			continue
 		}
 
-		//if src.IP.String() != *d.localIP {
-		d.onMessage(buf[:n], src)
-		//}
+		if src.IP.String() != *d.localIP {
+			d.onMessage(buf[:n], src)
+		}
 	}
 }
 
