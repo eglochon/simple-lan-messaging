@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"golang.org/x/net/ipv4"
 )
 
 func getLocalIP() string {
@@ -62,10 +64,10 @@ func (d *DiscoveryService) listen() {
 	}
 	defer conn.Close()
 
-	if d.localIP == nil {
-		localIP := getLocalIP()
-		d.localIP = &localIP
-	}
+	// if d.localIP == nil {
+	// 	localIP := getLocalIP()
+	// 	d.localIP = &localIP
+	// }
 	buf := make([]byte, 1024)
 
 	for d.running {
@@ -74,25 +76,31 @@ func (d *DiscoveryService) listen() {
 			continue
 		}
 
-		if src.IP.String() != *d.localIP {
-			d.onMessage(buf[:n], src)
-		}
+		//if src.IP.String() != *d.localIP {
+		d.onMessage(buf[:n], src)
+		//}
 	}
 }
 
 func (d *DiscoveryService) broadcast() {
-	groupAddr, err := net.ResolveUDPAddr("udp", multicastAddr)
+	groupAddr, err := net.ResolveUDPAddr("udp4", multicastAddr)
 	if err != nil {
 		fmt.Println("Broadcast resolve error:", err)
 		return
 	}
 
-	conn, err := net.DialUDP("udp", nil, groupAddr)
+	conn, err := net.DialUDP("udp4", nil, groupAddr)
 	if err != nil {
 		fmt.Println("Broadcast dial error:", err)
 		return
 	}
 	defer conn.Close()
+
+	p := ipv4.NewPacketConn(conn)
+	err = p.SetMulticastLoopback(false)
+	if err != nil {
+		fmt.Println("Failed to disable loopback:", err)
+	}
 
 	for d.running {
 		_, err := conn.Write(d.Message)
