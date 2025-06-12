@@ -23,7 +23,7 @@ func NewDiscoveryService(message []byte, interval time.Duration, onMessage func(
 }
 
 const (
-	multicastAddr = "224.0.0.250:9999"
+	multicastAddr = "224.0.0.250:40400"
 )
 
 func (d *DiscoveryService) Start() {

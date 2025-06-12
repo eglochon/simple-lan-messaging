@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/eglochon/simple-lan-messaging/src/discovery"
+	"github.com/eglochon/simple-lan-messaging/pkg/discovery"
 )
 
 type Message struct {
