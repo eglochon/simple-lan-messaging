@@ -38,6 +38,18 @@ func (pm *PeerManager) Stop() {
 	pm.running = false
 }
 
+// [AllPeers] returns a slice of all known peers
+func (pm *PeerManager) AllPeers() []*Peer {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+
+	var list []*Peer
+	for _, peer := range pm.peers {
+		list = append(list, peer)
+	}
+	return list
+}
+
 // [RegisterDiscovery] handles incoming discovery messages and registers or updates peers.
 func (pm *PeerManager) RegisterDiscovery(msg *models.DiscoveryMessage, addr net.Addr) error {
 	pm.mu.Lock()

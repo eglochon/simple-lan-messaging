@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/eglochon/simple-lan-messaging/config"
 	"github.com/eglochon/simple-lan-messaging/models"
@@ -55,7 +56,29 @@ func main() {
 	// Create a PeerManager
 	peerManager := comms.NewPeerManager(id)
 	peerManager.OnMessage(func(peerID string, payload []byte) {
+		fmt.Printf("[MESSAGE RECEIVED] From %s: %s\n", peerID, string(payload))
 	})
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			peers := peerManager.AllPeers()
+
+			for _, peer := range peers {
+				// Skip if peer is self
+				if peer.ID == myID {
+					continue
+				}
+				msg := fmt.Sprintf("Hello from %s at %s", selfAddr.Hostname, time.Now().Format("15:04:05"))
+				err := peerManager.SendMessage(peer.ID, []byte(msg))
+				if err != nil {
+					fmt.Printf("[SEND ERROR] To %s: %v\n", peer.ID, err)
+				} else {
+					fmt.Printf("[MESSAGE SENT] To %s: %s\n", peer.ID, msg)
+				}
+			}
+		}
+	}()
 
 	serviceAddr := selfAddr.Addr(config.SERVICE_PORT)
 	receiver := comms.NewTCPReceiver(serviceAddr, id, peerManager)
