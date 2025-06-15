@@ -64,7 +64,7 @@ func main() {
 	fmt.Println("Receiver started")
 
 	// Start discovery service
-	service, err := discovery.NewDiscoveryService(msgBytes, 60*time.Second, func(data []byte, addr *net.UDPAddr) {
+	discoveryService, err := discovery.NewDiscoveryService(msgBytes, 60*time.Second, func(data []byte, addr *net.UDPAddr) {
 		var msg models.DiscoveryMessage
 		if err := proto.Unmarshal(data, &msg); err == nil {
 			if err := peerManager.RegisterDiscovery(&msg, addr); err != nil {
@@ -80,7 +80,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to start discovery service: %v\n", err)
 		os.Exit(1)
 	}
-	service.Start()
+	discoveryService.Start()
 	fmt.Println("Discovery started. Press Ctrl+C to stop.")
 
 	// Wait for interrupt to gracefully shut down
@@ -89,6 +89,7 @@ func main() {
 	<-sig
 
 	fmt.Println("\nShutting down discovery service.")
-	service.Stop()
+	discoveryService.Stop()
+	receiver.Stop()
 	peerManager.Stop()
 }
