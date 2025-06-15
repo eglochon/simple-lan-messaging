@@ -93,8 +93,8 @@ func (pm *PeerManager) RegisterDiscovery(msg *models.DiscoveryMessage, addr net.
 		peer.EncPubKey = encPubKey
 		peer.LastSeen = time.Now()
 
-		if peerID != peer.IP || peerPort != peer.Port {
-			peer.IP = peerID
+		if peerIP != peer.IP || peerPort != peer.Port {
+			peer.IP = peerIP
 			peer.Port = peerPort
 
 			if peer.Conn != nil {
