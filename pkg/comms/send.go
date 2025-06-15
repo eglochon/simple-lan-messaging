@@ -4,11 +4,21 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/eglochon/simple-lan-messaging/models"
 	"google.golang.org/protobuf/proto"
 )
 
+// SendProto marshals and sends a protobuf message securely.
+func (pm *PeerManager) Send(peerID string, env *models.Envelope) error {
+	data, err := marshalProto(env)
+	if err != nil {
+		return err
+	}
+	return pm.sendMessage(peerID, data)
+}
+
 // SendMessage sends a raw encrypted message to a peer, connecting if needed.
-func (pm *PeerManager) SendMessage(peerID string, message []byte) error {
+func (pm *PeerManager) sendMessage(peerID string, message []byte) error {
 	pm.mu.RLock()
 	peer, exists := pm.peers[peerID]
 	pm.mu.RUnlock()
@@ -32,15 +42,6 @@ func (pm *PeerManager) SendMessage(peerID string, message []byte) error {
 	}
 
 	return peer.Conn.WriteEncrypted(message)
-}
-
-// SendProto marshals and sends a protobuf message securely.
-func (pm *PeerManager) SendProto(peerID string, msg any) error {
-	data, err := marshalProto(msg)
-	if err != nil {
-		return err
-	}
-	return pm.SendMessage(peerID, data)
 }
 
 func marshalProto(msg any) ([]byte, error) {

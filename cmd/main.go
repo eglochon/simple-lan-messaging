@@ -55,8 +55,16 @@ func main() {
 
 	// Create a PeerManager
 	peerManager := comms.NewPeerManager(id)
-	peerManager.OnMessage(func(peerID string, payload []byte) {
-		fmt.Printf("[MESSAGE RECEIVED] From %s: %s\n", peerID, string(payload))
+	peerManager.OnMessage(func(peerID string, env *models.Envelope) {
+		fmt.Printf("[MESSAGE RECEIVED] From %s\n", peerID)
+		switch payload := env.Payload.(type) {
+		case *models.Envelope_Peers:
+			fmt.Println("Peers:", payload.Peers.Id, payload.Peers.Name)
+		case *models.Envelope_Message:
+			fmt.Println("Message:", payload.Message.Topic, payload.Message.Content)
+		default:
+			fmt.Println("Unknown payload type")
+		}
 	})
 
 	go func() {
@@ -70,7 +78,12 @@ func main() {
 					continue
 				}
 				msg := fmt.Sprintf("Hello from %s at %s", selfAddr.Hostname, time.Now().Format("15:04:05"))
-				err := peerManager.SendMessage(peer.ID, []byte(msg))
+				err := peerManager.Send(peer.ID, &models.Envelope{
+					Type: "message",
+					Payload: &models.Envelope_Message{
+						Message: &models.TopicMessage{Topic: "hello", Content: msg},
+					},
+				})
 				if err != nil {
 					fmt.Printf("[SEND ERROR] To %s: %v\n", peer.ID, err)
 				} else {

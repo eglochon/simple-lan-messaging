@@ -11,6 +11,7 @@ import (
 
 	"github.com/eglochon/simple-lan-messaging/models"
 	"github.com/eglochon/simple-lan-messaging/pkg/identity"
+	"google.golang.org/protobuf/proto"
 )
 
 type PeerManager struct {
@@ -20,7 +21,7 @@ type PeerManager struct {
 	running bool
 	peers   map[string]*Peer // peerID → *Peer
 
-	onMessage          func(peerID string, payload []byte)
+	onMessage          func(peerID string, envelop *models.Envelope)
 	onPeerDisconnected func(peerID string)
 }
 
@@ -157,14 +158,14 @@ func (pm *PeerManager) Accept(conn net.Conn) error {
 }
 
 // [OnMessage] registers a callback that will be called on message receipt.
-func (pm *PeerManager) OnMessage(fn func(peerID string, payload []byte)) {
+func (pm *PeerManager) OnMessage(fn func(peerID string, envelop *models.Envelope)) {
 	pm.onMessage = fn
 }
 
 // [readLoop] continuously reads decrypted messages from a peer and calls the message handler.
 func (pm *PeerManager) readLoop(peer *Peer) {
 	for pm.running {
-		msg, err := peer.Conn.ReadEncrypted()
+		data, err := peer.Conn.ReadEncrypted()
 		if err != nil {
 			log.Printf("[INFO] Disconnected from peer %s: %v", peer.ID, err)
 
@@ -180,7 +181,12 @@ func (pm *PeerManager) readLoop(peer *Peer) {
 			return
 		}
 		if pm.onMessage != nil {
-			pm.onMessage(peer.ID, msg)
+			var envelop models.Envelope
+			if err := proto.Unmarshal(data, &envelop); err == nil {
+				pm.onMessage(peer.ID, &envelop)
+			} else {
+				fmt.Printf("[INVALID ENVELOP] from %s: %v\n", peer.ID, err)
+			}
 		}
 	}
 }
