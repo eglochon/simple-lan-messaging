@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/eglochon/simple-lan-messaging/config"
 	"github.com/eglochon/simple-lan-messaging/models"
@@ -64,7 +63,7 @@ func main() {
 	fmt.Println("Receiver started")
 
 	// Start discovery service
-	discoveryService, err := discovery.NewDiscoveryService(msgBytes, 60*time.Second, func(data []byte, addr *net.UDPAddr) {
+	discoveryService, err := discovery.NewDiscoveryService(msgBytes, config.ANNOUNCE_INTERVAL, func(data []byte, addr *net.UDPAddr) {
 		var msg models.DiscoveryMessage
 		if err := proto.Unmarshal(data, &msg); err == nil {
 			if err := peerManager.RegisterDiscovery(&msg, addr); err != nil {

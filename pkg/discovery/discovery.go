@@ -47,7 +47,7 @@ func (d *DiscoveryService) Stop() {
 }
 
 func (d *DiscoveryService) listen() {
-	addr, err := net.ResolveUDPAddr("udp", config.MULTICAST_ADDR)
+	addr, err := net.ResolveUDPAddr("udp", config.ANNOUNCE_ADDR)
 	if err != nil {
 		fmt.Println("Resolve error:", err)
 		return
@@ -75,7 +75,7 @@ func (d *DiscoveryService) listen() {
 }
 
 func (d *DiscoveryService) broadcast() {
-	groupAddr, err := net.ResolveUDPAddr("udp4", config.MULTICAST_ADDR)
+	groupAddr, err := net.ResolveUDPAddr("udp4", config.ANNOUNCE_ADDR)
 	if err != nil {
 		fmt.Println("Broadcast resolve error:", err)
 		return
