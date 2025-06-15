@@ -5,39 +5,35 @@ import (
 	"net"
 	"time"
 
+	"github.com/eglochon/simple-lan-messaging/config"
 	"golang.org/x/net/ipv4"
 )
-
-func getLocalIP() string {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return ""
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String()
-}
 
 type DiscoveryService struct {
 	Message   []byte
 	Interval  time.Duration
 	running   bool
 	onMessage func(data []byte, addr *net.UDPAddr)
-	localIP   *string
+	selfAddr  *SelfAddress
 }
 
 // NewDiscoveryService creates a new instance
-func NewDiscoveryService(message []byte, interval time.Duration, onMessage func(data []byte, addr *net.UDPAddr)) *DiscoveryService {
+func NewDiscoveryService(message []byte, interval time.Duration, onMessage func(data []byte, addr *net.UDPAddr)) (*DiscoveryService, error) {
+	selfAddr, err := NewSelfAddress()
+	if err != nil {
+		return nil, err
+	}
 	return &DiscoveryService{
 		Message:   message,
 		Interval:  interval,
 		onMessage: onMessage,
-	}
+		selfAddr:  selfAddr,
+	}, nil
 }
 
-const (
-	multicastAddr = "224.0.0.250:40400"
-)
+func (d *DiscoveryService) SetInterval(interval time.Duration) {
+	d.Interval = interval
+}
 
 func (d *DiscoveryService) Start() {
 	d.running = true
@@ -51,7 +47,7 @@ func (d *DiscoveryService) Stop() {
 }
 
 func (d *DiscoveryService) listen() {
-	addr, err := net.ResolveUDPAddr("udp", multicastAddr)
+	addr, err := net.ResolveUDPAddr("udp", config.MULTICAST_ADDR)
 	if err != nil {
 		fmt.Println("Resolve error:", err)
 		return
@@ -64,10 +60,6 @@ func (d *DiscoveryService) listen() {
 	}
 	defer conn.Close()
 
-	if d.localIP == nil {
-		localIP := getLocalIP()
-		d.localIP = &localIP
-	}
 	buf := make([]byte, 1024)
 
 	for d.running {
@@ -76,14 +68,14 @@ func (d *DiscoveryService) listen() {
 			continue
 		}
 
-		if src.IP.String() != *d.localIP {
+		if src.IP.String() != d.selfAddr.IP {
 			d.onMessage(buf[:n], src)
 		}
 	}
 }
 
 func (d *DiscoveryService) broadcast() {
-	groupAddr, err := net.ResolveUDPAddr("udp4", multicastAddr)
+	groupAddr, err := net.ResolveUDPAddr("udp4", config.MULTICAST_ADDR)
 	if err != nil {
 		fmt.Println("Broadcast resolve error:", err)
 		return
