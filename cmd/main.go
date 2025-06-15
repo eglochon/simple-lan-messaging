@@ -37,7 +37,7 @@ func main() {
 
 	// Build discovery message
 	myID := id.GetID()
-	discMsg := &models.DiscoveryMessage{
+	discMsg := &models.Discovery{
 		Id:   base64.RawURLEncoding.EncodeToString(id.SigningPublicKey),
 		Enc:  base64.RawURLEncoding.EncodeToString(id.EncryptPublicKey[:]),
 		Name: selfAddr.Hostname,
@@ -87,7 +87,7 @@ func main() {
 
 	// Start discovery service
 	discoveryService, err := discovery.NewDiscoveryService(msgBytes, config.ANNOUNCE_INTERVAL, func(data []byte, addr *net.UDPAddr) {
-		var msg models.DiscoveryMessage
+		var msg models.Discovery
 		if err := proto.Unmarshal(data, &msg); err == nil {
 			if err := peerManager.RegisterDiscovery(&msg, addr); err != nil {
 				fmt.Printf("[REGISTER ERROR] from %s: %v\n", addr.IP, err)

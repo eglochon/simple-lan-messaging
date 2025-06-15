@@ -4,7 +4,7 @@ package models;
 
 option go_package = "github.com/eglochon/simple-lan-messaging/models;models";
 
-message DiscoveryMessage {
+message Discovery {
   string id = 1;      // base64-encoded Ed25519 public key
   string enc = 2;     // base64-encoded X25519 public key
   string name = 3;    // Friendly username

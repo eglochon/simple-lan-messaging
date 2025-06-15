@@ -51,7 +51,7 @@ func (pm *PeerManager) AllPeers() []*Peer {
 }
 
 // [RegisterDiscovery] handles incoming discovery messages and registers or updates peers.
-func (pm *PeerManager) RegisterDiscovery(msg *models.DiscoveryMessage, addr net.Addr) error {
+func (pm *PeerManager) RegisterDiscovery(msg *models.Discovery, addr net.Addr) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
