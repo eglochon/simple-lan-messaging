@@ -10,15 +10,19 @@ import (
 )
 
 type serializedKey struct {
-	Private string `json:"private"`
-	Public  string `json:"public"`
+	SigningPrivate string `json:"signing_private"`
+	SigningPublic  string `json:"signing_public"`
+	EncryptPrivate string `json:"encrypt_private"`
+	EncryptPublic  string `json:"encrypt_public"`
 }
 
 // Save writes the keypair to a JSON file
 func (id *Identity) Save(path string) error {
 	data := serializedKey{
-		Private: base64.RawURLEncoding.EncodeToString(id.PrivateKey),
-		Public:  base64.RawURLEncoding.EncodeToString(id.PublicKey),
+		SigningPrivate: base64.RawURLEncoding.EncodeToString(id.SigningPrivateKey),
+		SigningPublic:  base64.RawURLEncoding.EncodeToString(id.SigningPublicKey),
+		EncryptPrivate: base64.RawURLEncoding.EncodeToString(id.EncryptPrivateKey[:]),
+		EncryptPublic:  base64.RawURLEncoding.EncodeToString(id.EncryptPublicKey[:]),
 	}
 
 	file, err := os.Create(path)
@@ -39,29 +43,46 @@ func LoadIdentity(path string) (*Identity, error) {
 	defer file.Close()
 
 	var data serializedKey
-	err = json.NewDecoder(file).Decode(&data)
-	if err != nil {
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, err
 	}
 
-	priv, err := base64.RawURLEncoding.DecodeString(data.Private)
-	if err != nil || len(priv) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid private key")
+	// Decode Ed25519 keys
+	signingPriv, err := base64.RawURLEncoding.DecodeString(data.SigningPrivate)
+	if err != nil || len(signingPriv) != ed25519.PrivateKeySize {
+		return nil, errors.New("invalid signing private key")
 	}
-	pub, err := base64.RawURLEncoding.DecodeString(data.Public)
-	if err != nil || len(pub) != ed25519.PublicKeySize {
-		return nil, errors.New("invalid public key")
+	signingPub, err := base64.RawURLEncoding.DecodeString(data.SigningPublic)
+	if err != nil || len(signingPub) != ed25519.PublicKeySize {
+		return nil, errors.New("invalid signing public key")
 	}
 
+	// Decode X25519 keys
+	encryptPrivBytes, err := base64.RawURLEncoding.DecodeString(data.EncryptPrivate)
+	if err != nil || len(encryptPrivBytes) != 32 {
+		return nil, errors.New("invalid encryption private key")
+	}
+	var encryptPriv [32]byte
+	copy(encryptPriv[:], encryptPrivBytes)
+
+	encryptPubBytes, err := base64.RawURLEncoding.DecodeString(data.EncryptPublic)
+	if err != nil || len(encryptPubBytes) != 32 {
+		return nil, errors.New("invalid encryption public key")
+	}
+	var encryptPub [32]byte
+	copy(encryptPub[:], encryptPubBytes)
+
 	return &Identity{
-		PrivateKey: ed25519.PrivateKey(priv),
-		PublicKey:  ed25519.PublicKey(pub),
+		SigningPrivateKey: ed25519.PrivateKey(signingPriv),
+		SigningPublicKey:  ed25519.PublicKey(signingPub),
+		EncryptPrivateKey: encryptPriv,
+		EncryptPublicKey:  encryptPub,
 	}, nil
 }
 
 // GetOrCreate tries to load an identity from the given path,
 // or generates and saves a new one if not found or invalid.
-func GetOrCreate(path string) (*Identity, error) {
+func GetOrCreateIdentity(path string) (*Identity, error) {
 	// Try to load
 	id, err := LoadIdentity(path)
 	if err == nil {
@@ -69,7 +90,7 @@ func GetOrCreate(path string) (*Identity, error) {
 	}
 
 	// Generate new
-	id, err = Generate()
+	id, err = NewIdentity()
 	if err != nil {
 		return nil, err
 	}
@@ -92,5 +113,5 @@ func DefaultPath() string {
 	if err != nil {
 		return "identity.json"
 	}
-	return filepath.Join(cwd, "data", "identity.json")
+	return filepath.Join(cwd, "identity.json")
 }
